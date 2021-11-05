@@ -6,7 +6,6 @@ terraform {
   required_version = "~> 1.0"
 }
 
-
 provider "aws" {
   region                  = "us-east-1"
   shared_credentials_file = pathexpand("/Users/captain/.aws/credentials")
@@ -33,9 +32,6 @@ module "alb" {
   alb_target_group_name     = "myFirstLB"
   alb_target_group_protocol = "HTTP"
   alb_target_group_vpc_id   = "vpc-0ea8873ab2bf7900d"
-
-  
-  
   
   alb_target_group_health_check = [
     {
