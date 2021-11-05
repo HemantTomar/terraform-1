@@ -2,6 +2,7 @@
 # MAINTAINER Vitaliy Natarov "vitaliy.natarov@yahoo.com"
 #
 
+
 terraform {
   required_version = "~> 1.0"
 }
