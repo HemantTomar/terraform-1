@@ -13,7 +13,6 @@ provider "aws" {
 
 }
 
-
 module "alb" {
   source      = "../../modules/alb"
   name        = "App-Load-Balancer"
