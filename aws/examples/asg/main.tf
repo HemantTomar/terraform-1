@@ -9,6 +9,9 @@ module "key_pair" {
   public_key      = file("./additional_files/prod-bastion_ukraine.pub")
 }
 
+
+
+
 module "lt" {
   source      = "../../modules/asg_new"
   name        = "my-first"
