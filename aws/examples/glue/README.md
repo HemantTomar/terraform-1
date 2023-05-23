@@ -231,39 +231,45 @@ module "glue" {
     location      = "s3://${module.s3_private_glue_catalog.s3_bucket_id}/test"
     input_format  = "org.apache.hadoop.mapred.TextInputFormat"
     output_format = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
+
+    columns = [
+      {
+        columns_name    = "oid"
+        columns_type    = "double"
+        columns_comment = "oid"
+      },
+      {
+        columns_name    = "oid2"
+        columns_type    = "double"
+        columns_comment = "oid2"
+      },
+      {
+        columns_name    = "oid3"
+        columns_type    = "double"
+        columns_comment = "oid3"
+      },
+    ]
+
+    ser_de_info = [
+      {
+        ser_de_info_name                  = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
+        ser_de_info_serialization_library = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
+        ser_de_info_parameters            = tomap({ "field.delim" = "," })
+      }
+    ]
+
+    skewed_info = [
+      {
+        ser_de_info_name                  = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
+        ser_de_info_serialization_library = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
+        ser_de_info_parameters            = tomap({ "field.delim" = "," })
+      }
+    ]
+
+    sort_columns = []
   }
-  storage_descriptor_columns = [
-    {
-      columns_name    = "oid"
-      columns_type    = "double"
-      columns_comment = "oid"
-    },
-    {
-      columns_name    = "oid2"
-      columns_type    = "double"
-      columns_comment = "oid2"
-    },
-    {
-      columns_name    = "oid3"
-      columns_type    = "double"
-      columns_comment = "oid3"
-    },
-  ]
-  storage_descriptor_ser_de_info = [
-    {
-      ser_de_info_name                  = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
-      ser_de_info_serialization_library = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
-      ser_de_info_parameters            = tomap({ "field.delim" = "," })
-    }
-  ]
-  storage_descriptor_skewed_info = [
-    {
-      ser_de_info_name                  = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
-      ser_de_info_serialization_library = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
-      ser_de_info_parameters            = tomap({ "field.delim" = "," })
-    }
-  ]
-  storage_descriptor_sort_columns = []
+
+
   # AWS Glue connection
   enable_glue_connection = true
   glue_connection_connection_properties = {
@@ -333,6 +339,26 @@ module "glue_trigger" {
     }
   ]
 
+  glue_trigger_predicate = {
+    logical = "AND"
+    conditions = [
+      {
+        job_name         = "job-name-1"
+        state            = null
+        crawler_name     = null
+        crawl_state      = null
+        logical_operator = "EQUALS"
+      },
+      {
+        job_name         = "job-name-2"
+        state            = null
+        crawler_name     = null
+        crawl_state      = null
+        logical_operator = "EQUALS"
+      }
+    ]
+  }
+
   tags = merge(
     module.aws_user_tags.tags,
     tomap({
@@ -345,7 +371,8 @@ module "glue_trigger" {
     module.glue,
     module.aws_user_tags
   ]
-}```
+}
+```
 
 ## Module Input Variables
 ----------------------
@@ -371,10 +398,6 @@ module "glue_trigger" {
 - `glue_catalog_table_table_type` - (Optional) The type of this table (EXTERNAL_TABLE, VIRTUAL_VIEW, etc.). (`default = null`)
 - `glue_catalog_table_parameters` - (Optional) Properties associated with this table, as a list of key-value pairs. (`default = null`)
 - `glue_catalog_table_storage_descriptor` - (Optional) A storage descriptor object containing information about the physical storage of this table. You can refer to the Glue Developer Guide for a full explanation of this object. (`default = {'location': None, 'input_format': None, 'output_format': None, 'compressed': None, 'number_of_buckets': None, 'bucket_columns': None, 'parameters': None, 'stored_as_sub_directories': None}`)
-- `storage_descriptor_columns` - (Optional) A list of the Columns in the table. (`default = []`)
-- `storage_descriptor_ser_de_info` - (Optional) Serialization/deserialization (SerDe) information. (`default = []`)
-- `storage_descriptor_sort_columns` - (Optional) A list of Order objects specifying the sort order of each bucket in the table. (`default = []`)
-- `storage_descriptor_skewed_info` - (Optional) Information about values that appear very frequently in a column (skewed values). (`default = []`)
 - `enable_glue_classifier` - Enable glue classifier usage (`default = False`)
 - `glue_classifier_name` - The name of the classifier. (`default = ""`)
 - `glue_classifier_csv_classifier` - (Optional) A classifier for Csv content.  (`default = []`)
@@ -409,9 +432,7 @@ module "glue_trigger" {
 - `glue_crawler_lineage_configuration` - (Optional) Specifies data lineage configuration settings for the crawler. (`default = []`)
 - `enable_glue_security_configuration` - Enable glue security configuration usage (`default = False`)
 - `glue_security_configuration_name` - Name of the security configuration. (`default = ""`)
-- `glue_security_configuration_cloudwatch_encryption` - (Required) A cloudwatch_encryption block as described below, which contains encryption configuration for CloudWatch. (`default = []`)
-- `glue_security_configuration_job_bookmarks_encryption` - (Required) A job_bookmarks_encryption block as described below, which contains encryption configuration for job bookmarks. (`default = []`)
-- `glue_security_configuration_s3_encryption` - (Required) A s3_encryption block as described below, which contains encryption configuration for S3 data. (`default = []`)
+- `glue_security_configuration_encryption_configuration` - Set encryption configuration for Glue security configuration (`default = {}`)
 - `enable_glue_workflow` - Enable glue workflow usage (`default = False`)
 - `glue_workflow_name` - The name you assign to this workflow. (`default = ""`)
 - `glue_workflow_description` - (Optional) Description of the workflow. (`default = null`)
@@ -421,11 +442,12 @@ module "glue_trigger" {
 - `glue_job_role_arn` - The ARN of the IAM role associated with this job. (`default = null`)
 - `glue_job_command` - (Required) The command of the job. (`default = []`)
 - `glue_job_description` - (Optional) Description of the job. (`default = null`)
-- `glue_job_connections` - (Optional) The list of connections used for this job. (`default = null`)
+- `glue_job_connections` - (Optional) The list of connections used for this job. (`default = []`)
 - `glue_job_additional_connections` - (Optional) The list of connections used for the job. (`default = []`)
 - `glue_job_default_arguments` - (Optional) The map of default arguments for this job. You can specify arguments here that your own job-execution script consumes, as well as arguments that AWS Glue itself consumes. For information about how to specify and consume your own Job arguments, see the Calling AWS Glue APIs in Python topic in the developer guide. For information about the key-value pairs that AWS Glue consumes to set up your job, see the Special Parameters Used by AWS Glue topic in the developer guide. (`default = {'--job-language': 'python'}`)
 - `glue_job_execution_property` - (Optional) Execution property of the job. (`default = []`)
 - `glue_job_glue_version` - (Optional) The version of glue to use, for example '1.0'. For information about available versions, see the AWS Glue Release Notes. (`default = null`)
+- `glue_job_execution_class` - (Optional) Indicates whether the job is run with a standard or flexible execution class. The standard execution class is ideal for time-sensitive workloads that require fast job startup and dedicated resources. Valid value: FLEX, STANDARD. (`default = null`)
 - `glue_job_max_capacity` - (Optional) The maximum number of AWS Glue data processing units (DPUs) that can be allocated when this job runs. Required when pythonshell is set, accept either 0.0625 or 1.0. (`default = null`)
 - `glue_job_max_retries` - (Optional) The maximum number of times to retry this job if it fails. (`default = null`)
 - `glue_job_notification_property` - (Optional) Notification property of the job. (`default = []`)
@@ -441,11 +463,10 @@ module "glue_trigger" {
 - `glue_trigger_schedule` - (Optional) A cron expression used to specify the schedule. Time-Based Schedules for Jobs and Crawlers (`default = null`)
 - `glue_trigger_workflow_name` - (Optional) A workflow to which the trigger should be associated to. Every workflow graph (DAG) needs a starting trigger (ON_DEMAND or SCHEDULED type) and can contain multiple additional CONDITIONAL triggers. (`default = null`)
 - `glue_trigger_actions` - (Required) List of actions initiated by this trigger when it fires.  (`default = []`)
-- `glue_trigger_timeouts` - Set timeouts for glue trigger (`default = []`)
-- `glue_trigger_predicate` - (Optional) A predicate to specify when the new trigger should fire. Required when trigger type is CONDITIONAL (`default = []`)
+- `glue_trigger_timeouts` - Set timeouts for glue trigger (`default = {}`)
+- `glue_trigger_predicate` - (Optional) A predicate to specify when the new trigger should fire. Required when trigger type is CONDITIONAL (`default = {}`)
 - `enable_glue_data_catalog_encryption_settings` - Enable glue data catalog encryption settings usage (`default = False`)
-- `glue_data_catalog_encryption_settings_connection_password_encryption` - (Required) When connection password protection is enabled, the Data Catalog uses a customer-provided key to encrypt the password as part of CreateConnection or UpdateConnection and store it in the ENCRYPTED_PASSWORD field in the connection properties. You can enable catalog encryption or only password encryption. see Connection Password Encryption. (`default = []`)
-- `glue_data_catalog_encryption_settings_encryption_at_rest` - (Required) Specifies the encryption-at-rest configuration for the Data Catalog. see Encryption At Rest. (`default = []`)
+- `glue_data_catalog_encryption_settings_data_catalog_encryption_settings` - Set data_catalog_encryption_settings block for Glue data catalog encryption (`default = {}`)
 - `glue_data_catalog_encryption_settings_catalog_id` - (Optional) The ID of the Data Catalog to set the security configuration for. If none is provided, the AWS account ID is used by default. (`default = null`)
 - `enable_glue_dev_endpoint` - Enable glue dev endpoint usage (`default = False`)
 - `glue_dev_endpoint_name` - The name of this endpoint. It must be unique in your account. (`default = ""`)
@@ -480,10 +501,6 @@ module "glue_trigger" {
 - `glue_partition_partition_values` - (Required) The values that define the partition. (`default = []`)
 - `glue_partition_catalog_id` - (Optional) ID of the Glue Catalog and database to create the table in. If omitted, this defaults to the AWS Account ID plus the database name. (`default = null`)
 - `glue_partition_parameters` - (Optional) Properties associated with this table, as a list of key-value pairs. (`default = null`)
-- `glue_partition_storage_descriptor_columns` - (Optional) A list of the Columns in the table. (`default = []`)
-- `glue_partition_storage_descriptor_ser_de_info` - (Optional) Serialization/deserialization (SerDe) information. (`default = []`)
-- `glue_partition_storage_descriptor_sort_columns` - (Optional) A list of Order objects specifying the sort order of each bucket in the table. (`default = []`)
-- `glue_partition_storage_descriptor_skewed_info` - (Optional) Information about values that appear very frequently in a column (skewed values). (`default = []`)
 - `glue_partition_storage_descriptor` - (Optional) A storage descriptor object containing information about the physical storage of this table. You can refer to the Glue Developer Guide for a full explanation of this object. (`default = {'location': None, 'input_format': None, 'output_format': None, 'compressed': None, 'number_of_buckets': None, 'bucket_columns': None, 'parameters': None, 'stored_as_sub_directories': None}`)
 - `enable_glue_registry` - Enable glue registry usage (`default = False`)
 - `glue_registry_name` - The Name of the registry. (`default = ""`)
@@ -505,6 +522,12 @@ module "glue_trigger" {
 - `glue_user_defined_function_owner_type` - (Required) The owner type. can be one of USER, ROLE, and GROUP. (`default = null`)
 - `glue_user_defined_function_catalog_id` - (Optional) ID of the Glue Catalog to create the function in. If omitted, this defaults to the AWS Account ID. (`default = null`)
 - `glue_user_defined_function_resource_uris` - (Optional) The configuration block for Resource URIs. See resource uris below for more details. (`default = []`)
+- `enable_glue_partition_index` - Enable glue partition index usage (`default = False`)
+- `glue_partition_index_table_name` - Name of the table. For Hive compatibility, this must be entirely lowercase. (`default = ""`)
+- `glue_partition_index_database_name` - (Required) Name of the metadata database where the table metadata resides. For Hive compatibility, this must be all lowercase. (`default = ""`)
+- `glue_partition_index_catalog_id` - (Optional) The catalog ID where the table resides. (`default = ""`)
+- `glue_partition_index_partition_index` - (Required) Configuration block for a partition index. (`default = []`)
+- `glue_partition_index_timeouts` - Set timeouts glue partition index (`default = {}`)
 
 ## Module Output Variables
 ----------------------
@@ -555,7 +578,8 @@ module "glue_trigger" {
 - `glue_schema_schema_checkpoint` - The version number of the checkpoint (the last time the compatibility mode was changed).
 - `glue_user_defined_function_id` - The id of the Glue User Defined Function.
 - `glue_user_defined_function_arn` - The ARN of the Glue User Defined Function.
-- `glue_user_defined_function_create_date` - The time at which the function was created.
+- `glue_user_defined_function_create_time` - The time at which the function was created.
+- `glue_partition_index_id` - Catalog ID, Database name, table name, and index name.
 
 
 ## Authors

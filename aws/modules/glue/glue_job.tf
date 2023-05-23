@@ -8,9 +8,10 @@ resource "aws_glue_job" "glue_job" {
   role_arn = var.glue_job_role_arn
 
   description            = var.glue_job_description
-  connections            = var.glue_job_connections != null && !var.enable_glue_connection ? var.glue_job_connections : concat(var.glue_job_additional_connections, [element(concat(aws_glue_connection.glue_connection.*.id, [""]), 0)])
+  connections            = length(var.glue_job_connections) > 0 ? var.glue_job_connections : (var.enable_glue_connection ? concat(var.glue_job_additional_connections, [element(concat(aws_glue_connection.glue_connection.*.id, [""]), 0)]) : [])
   default_arguments      = var.glue_job_default_arguments
   glue_version           = var.glue_job_glue_version
+  execution_class        = var.glue_job_execution_class
   max_capacity           = var.glue_job_max_capacity
   max_retries            = var.glue_job_max_retries
   timeout                = var.glue_job_timeout

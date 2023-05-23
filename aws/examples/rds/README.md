@@ -20,8 +20,10 @@ provider "aws" {
   shared_credentials_file = pathexpand("~/.aws/credentials")
 }
 
+
 module "rds_cluster" {
-  source      = "../../modules/rds"
+  source = "../../modules/rds"
+
   name        = "Test"
   region      = "us-east-1"
   environment = "stage"
@@ -36,7 +38,7 @@ module "rds_cluster" {
     {
       name  = "character_set_client"
       value = "utf8"
-    },
+    }
   ]
 
   enable_db_subnet_group     = true
@@ -53,6 +55,8 @@ module "rds_cluster" {
 
   enable_rds_cluster_instance         = true
   number_rds_cluster_instances        = 1
+  rds_cluster_instance_engine         = "aurora"
+  rds_cluster_instance_engine_version = null #"5.7.12" 
   rds_cluster_instance_instance_class = "db.t2.small"
 
 
@@ -131,6 +135,7 @@ module "db_instance-rds-oracle" {
     "Orchestration" = "Terraform"
   })
 }
+
 ```
 
 ## Module Input Variables
@@ -182,6 +187,8 @@ module "db_instance-rds-oracle" {
 - `rds_cluster_instance_identifier_prefix` - (Optional, Forces new resource) Creates a unique identifier beginning with the specified prefix. Conflicts with rds_cluster_instance_identifier. (`default = ""`)
 - `rds_cluster_instance_cluster_identifier` - The identifier of the aws_rds_cluster in which to launch this instance. (`default = ""`)
 - `rds_cluster_instance_instance_class` - The instance type of the RDS instance. (`default = db.t2.small`)
+- `rds_cluster_instance_engine` - The instance engine name (`default = aurora`)
+- `rds_cluster_instance_engine_version` - The engine version for rds cluster instance. (`default = null`)
 - `rds_cluster_instance_publicly_accessible` - (Optional) Bool to control if instance is publicly accessible. Default false. See the documentation on Creating DB Instances for more details on controlling this property. (`default = False`)
 - `rds_cluster_instance_db_subnet_group_name` - A DB subnet group to associate with this DB instance. NOTE: This must match the db_subnet_group_name of the attached aws_rds_cluster. (`default = ""`)
 - `rds_cluster_instance_db_parameter_group_name` - (Optional) The name of the DB parameter group to associate with this instance. (`default = null`)
@@ -237,7 +244,7 @@ module "db_instance-rds-oracle" {
 - `db_instance_character_set_name` - The character set name to use for DB encoding in Oracle instances. This can't be changed. For ex: utf8 (`default = ""`)
 - `db_instance_parameter_group_name` - Name of the DB parameter group to associate. For ex: default.mysql5.6 (`default = ""`)
 - `db_instance_maintenance_window` - The daily time range (in UTC) during which maintenance window are enabled. Must not overlap with backup_window. For ex: SUN 12:30AM-01:30AM ET (`default = sun:04:30-sun:05:30`)
-- `db_instance_replicate_source_db` - Specifies that this resource is a Replicate database, and to use this value as the source database. This correlates to the identifier of another Amazon RDS Database to replicate. (`default = ""`)
+- `db_instance_replicate_source_db` - Specifies that this resource is a Replicate database, and to use this value as the source database. This correlates to the identifier of another Amazon RDS Database to replicate. (`default = null`)
 - `db_instance_publicly_accessible` - (Optional) Bool to control if instance is publicly accessible. Default is false. (`default = False`)
 - `db_instance_multi_az` - If the RDS instance is multi AZ enabled. (`default = False`)
 - `db_instance_availability_zone` - (Optional) The AZ for the RDS instance. (`default = null`)
@@ -269,7 +276,7 @@ module "db_instance-rds-oracle" {
 - `db_instance_performance_insights_kms_key_id` - (Optional) The ARN for the KMS key to encrypt Performance Insights data. When specifying performance_insights_kms_key_id, performance_insights_enabled needs to be set to true. Once KMS key is set, it can never be changed. (`default = null`)
 - `db_instance_performance_insights_retention_period` - (Optional) The amount of time in days to retain Performance Insights data. Either 7 (7 days) or 731 (2 years). When specifying performance_insights_retention_period, performance_insights_enabled needs to be set to true. Defaults to '7'. (`default = 7`)
 - `db_instance_s3_import` - Set s3 import settings (`default = []`)
-- `db_instance_timeouts` - Set timeouts for db instance (`default = []`)
+- `db_instance_timeouts` - Set timeouts for db instance (`default = {}`)
 - `enable_db_subnet_group` - Enable DB subnet group usage (`default = False`)
 - `db_subnet_group_name` - Name of DB subnet group. DB instance will be created in the VPC associated with the DB subnet group. If unspecified, will be created in the default VPC, or in EC2 Classic, if available. (`default = ""`)
 - `db_subnet_group_name_prefix` - (Optional, Forces new resource) Creates a unique name beginning with the specified prefix. Conflicts with db_subnet_group_name (`default = null`)
@@ -282,9 +289,9 @@ module "db_instance-rds-oracle" {
 - `db_parameter_group_family` - The family of the DB parameter group. (`default = ""`)
 - `db_parameter_group_parameters` - (Optional) A list of DB parameters to apply. Note that parameters may differ from a family to an other. Full list of all parameters can be discovered via aws rds describe-db-parameters after initial creation of the group. (`default = []`)
 - `enable_db_cluster_snapshot` - Enable DB cluster snapshot usage (`default = False`)
-- `db_cluster_identifier` - The DB Cluster Identifier from which to take the snapshot. (`default = ""`)
+- `db_cluster_snapshot_db_cluster_identifier` - The DB Cluster Identifier from which to take the snapshot. (`default = ""`)
 - `db_cluster_snapshot_identifier` - (Required) The Identifier for the snapshot. (`default = ""`)
-- `db_cluster_snapshot_timeouts` - Set timeouts for db cluster snapshot (`default = []`)
+- `db_cluster_snapshot_timeouts` - Set timeouts for db cluster snapshot (`default = {}`)
 - `enable_db_event_subscription` - Enable DB event subscription usage (`default = False`)
 - `db_event_subscription_name` - The name of the DB event subscription. By default generated by Terraform. (`default = ""`)
 - `db_event_subscription_name_prefix` - (Optional) The name of the DB event subscription. Conflicts with db_event_subscription_name (`default = ""`)
@@ -293,7 +300,7 @@ module "db_instance-rds-oracle" {
 - `db_event_subscription_source_ids` - (Optional) A list of identifiers of the event sources for which events will be returned. If not specified, then all sources are included in the response. If specified, a source_type must also be specified. (`default = []`)
 - `db_event_subscription_enabled` - (Optional) A boolean flag to enable/disable the subscription. Defaults to true. (`default = True`)
 - `db_event_subscription_event_categories` -  (Optional) A list of event categories for a SourceType that you want to subscribe to. See http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Events.html or run aws rds describe-event-categories. (`default = ['availability', 'deletion', 'failover', 'failure', 'low storage', 'maintenance', 'notification', 'read replica', 'recovery', 'restoration']`)
-- `db_event_subscription_timeouts` - Set timeouts for db event subscription (`default = []`)
+- `db_event_subscription_timeouts` - Set timeouts for db event subscription (`default = {}`)
 - `enable_db_snapshot` - Enable DB snapshot usage (`default = False`)
 - `db_snapshot_db_instance_identifier` - The DB Instance Identifier from which to take the snapshot. (`default = ""`)
 - `db_snapshot_db_snapshot_identifier` - (Required) The Identifier for the snapshot. (`default = ""`)
@@ -307,32 +314,12 @@ module "db_instance-rds-oracle" {
 - `db_instance_role_association_role_arn` - (Required) Amazon Resource Name (ARN) of the IAM Role to associate with the DB Instance. (`default = ""`)
 - `enable_db_option_group` - Enable DB option group usage (`default = False`)
 - `db_option_group_name` - (Optional, Forces new resource) The name of the option group. If omitted, Terraform will assign a random, unique name. Must be lowercase, to match as it is stored in AWS. (`default = ""`)
-- `db_option_group_name_prefix` - description (`default = ""`)
+- `db_option_group_name_prefix` - Set prefix name for db option group (`default = ""`)
 - `db_option_group_option_group_description` - (Optional) The description of the option group. Defaults to 'Managed by Terraform'. (`default = Managed by Terraform`)
 - `db_option_group_engine_name` - (Required) Specifies the name of the engine that this option group should be associated with. For ex: sqlserver-ee (`default = ""`)
 - `db_option_group_major_engine_version` - (Required) Specifies the major version of the engine that this option group should be associated with. For ex: 11.00 (`default = ""`)
-- `db_option_group_timeouts` - Set timeouts for db option group (`default = []`)
+- `db_option_group_timeouts` - Set timeouts for db option group (`default = {}`)
 - `db_option_group_options` - (Optional) A list of Options to apply. (`default = []`)
-- `enable_db_proxy` - Enable db proxy usage (`default = False`)
-- `db_proxy_name` - The identifier for the proxy. This name must be unique for all proxies owned by your AWS account in the specified AWS Region. An identifier must begin with a letter and must contain only ASCII letters, digits, and hyphens; it can't end with a hyphen or contain two consecutive hyphens. (`default = ""`)
-- `db_proxy_engine_family` - (Required, Forces new resource) The kinds of databases that the proxy can connect to. This value determines which database network protocol the proxy recognizes when it interprets network traffic to and from the database. The engine family applies to MySQL and PostgreSQL for both RDS and Aurora. Valid values are MYSQL and POSTGRESQL (`default = null`)
-- `db_proxy_role_arn` - (Required) The Amazon Resource Name (ARN) of the IAM role that the proxy uses to access secrets in AWS Secrets Manager. (`default = null`)
-- `db_proxy_vpc_subnet_ids` - (Required) One or more VPC subnet IDs to associate with the new proxy. (`default = []`)
-- `db_proxy_auth` - (Required) Configuration block(s) with authorization mechanisms to connect to the associated instances or clusters. (`default = []`)
-- `db_proxy_debug_logging` - (Optional) Whether the proxy includes detailed information about SQL statements in its logs. This information helps you to debug issues involving SQL behavior or the performance and scalability of the proxy connections. The debug information includes the text of SQL statements that you submit through the proxy. Thus, only enable this setting when needed for debugging, and only when you have security measures in place to safeguard any sensitive information that appears in the logs. (`default = null`)
-- `db_proxy_idle_client_timeout` - (Optional) The number of seconds that a connection to the proxy can be inactive before the proxy disconnects it. You can set this value higher or lower than the connection timeout limit for the associated database. (`default = null`)
-- `db_proxy_require_tls` - (Optional) A Boolean parameter that specifies whether Transport Layer Security (TLS) encryption is required for connections to the proxy. By enabling this setting, you can enforce encrypted TLS connections to the proxy. (`default = null`)
-- `db_proxy_vpc_security_group_ids` - (Optional) One or more VPC security group IDs to associate with the new proxy. (`default = null`)
-- `db_proxy_timeouts` - Set timeouts for DB proxy (`default = []`)
-- `enable_db_proxy_default_target_group` - Enable db proxy default target group usage (`default = False`)
-- `db_proxy_default_target_group_db_proxy_name` - Name of the RDS DB Proxy. (`default = ""`)
-- `db_proxy_default_target_group_timeouts` - Set timeouts for DB proxy default target group (`default = []`)
-- `enable_db_proxy_target` - Enable db proxy target usage (`default = False`)
-- `db_proxy_target_db_proxy_name` - The name of the DB proxy. (`default = ""`)
-- `db_proxy_default_target_group_connection_pool_config` - (Optional) The settings that determine the size and behavior of the connection pool for the target group. (`default = []`)
-- `db_proxy_target_target_group_name` - The name of the target group. (`default = ""`)
-- `db_proxy_target_db_instance_identifier` - (Optional, Forces new resource) DB instance identifier. (`default = null`)
-- `db_proxy_target_db_cluster_identifier` - (Optional, Forces new resource) DB cluster identifier. (`default = null`)
 
 ## Module Output Variables
 ----------------------
@@ -352,6 +339,7 @@ module "db_instance-rds-oracle" {
 - `db_instance_arn` - ""
 - `db_instance_addresses` - ""
 - `db_instance_hosted_zone_id` - Get DB instance hosted zone ID
+- `db_instance_endpoint` - Get DB instance hosted zone ID
 - `aws_db_subnet_group_id` - Get DB subnet group ID
 - `db_parameter_group_id` - Get DB parameter group ID
 - `db_cluster_snapshot_id` - Get DB cluster snapshot ID
@@ -364,19 +352,6 @@ module "db_instance-rds-oracle" {
 - `db_instance_role_association_id` - ""
 - `db_option_group_id` - The db option group name.
 - `db_option_group_arn` - The ARN of the db option group.
-- `db_proxy_id` - The Amazon Resource Name (ARN) for the proxy.
-- `db_proxy_arn` - The Amazon Resource Name (ARN) for the proxy.
-- `db_proxy_endpoint` - The endpoint that you can use to connect to the proxy. You include the endpoint value in the connection string for a database client application.
-- `db_proxy_default_target_group_id` - Name of the RDS DB Proxy.
-- `db_proxy_default_target_group_arn` - The Amazon Resource Name (ARN) representing the target group.
-- `db_proxy_default_target_group_name` - The name of the default target group.
-- `db_proxy_target_id` - Identifier of db_proxy_name, target_group_name, target type (e.g. RDS_INSTANCE or TRACKED_CLUSTER), and resource identifier separated by forward slashes (/).
-- `db_proxy_target_endpoint` - Hostname for the target RDS DB Instance. Only returned for RDS_INSTANCE type.
-- `db_proxy_target_port` - Port for the target RDS DB Instance or Aurora DB Cluster.
-- `db_proxy_target_rds_resource_id` - Identifier representing the DB Instance or DB Cluster target.
-- `db_proxy_target_target_arn` - Amazon Resource Name (ARN) for the DB instance or DB cluster. Currently not returned by the RDS API.
-- `db_proxy_target_tracked_cluster_id` - DB Cluster identifier for the DB Instance target. Not returned unless manually importing an RDS_INSTANCE target that is part of a DB Cluster.
-- `db_proxy_target_type` - Type of target. e.g. RDS_INSTANCE or TRACKED_CLUSTER
 
 
 ## Authors

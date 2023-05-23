@@ -1,5 +1,5 @@
 #---------------------------------------------------
-# Create AWS RDS instance(s)
+# AWS RDS instance(s)
 #---------------------------------------------------
 resource "aws_db_instance" "db_instance" {
   count = var.enable_db_instance ? var.number_of_instances : 0
@@ -12,7 +12,7 @@ resource "aws_db_instance" "db_instance" {
   instance_class      = var.db_instance_instance_class
   replicate_source_db = var.db_instance_replicate_source_db
 
-  name               = var.db_instance_db_name
+  db_name            = var.db_instance_db_name
   username           = var.db_instance_db_username
   password           = var.db_instance_db_password
   port               = var.db_instance_db_port != null ? var.db_instance_db_port : lookup(var.default_ports, var.db_instance_engine)
@@ -77,7 +77,7 @@ resource "aws_db_instance" "db_instance" {
 
   dynamic "timeouts" {
     iterator = timeouts
-    for_each = var.db_instance_timeouts
+    for_each = length(keys(var.db_instance_timeouts)) > 0 ? [var.db_instance_timeouts] : []
 
     content {
       create = lookup(timeouts.value, "create", null)

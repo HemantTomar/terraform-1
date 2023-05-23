@@ -1,6 +1,12 @@
 #---------------------------------------------------
 # Launch AWS configuration
 #---------------------------------------------------
+data "template_file" "lc_user_data" {
+  count = var.lc_user_data != null ? 1 : 0
+
+  template = var.lc_user_data
+}
+
 resource "aws_launch_configuration" "lc" {
   count = var.enable_lc ? 1 : 0
 
@@ -23,6 +29,7 @@ resource "aws_launch_configuration" "lc" {
   dynamic "ebs_block_device" {
     iterator = ebs_block_device
     for_each = var.lc_ebs_block_device
+
     content {
       delete_on_termination = lookup(ebs_block_device.value, "delete_on_termination", null)
       device_name           = ebs_block_device.value.device_name
@@ -38,6 +45,7 @@ resource "aws_launch_configuration" "lc" {
   dynamic "ephemeral_block_device" {
     iterator = ephemeral_block_device
     for_each = var.lc_ephemeral_block_device
+
     content {
       device_name  = ephemeral_block_device.value.device_name
       virtual_name = ephemeral_block_device.value.virtual_name
@@ -46,7 +54,8 @@ resource "aws_launch_configuration" "lc" {
 
   dynamic "root_block_device" {
     iterator = root_block_device
-    for_each = var.lc_root_block_device
+    for_each = length(keys(var.lc_root_block_device)) > 0 ? [var.lc_root_block_device] : []
+
     content {
       delete_on_termination = lookup(root_block_device.value, "delete_on_termination", null)
       iops                  = lookup(root_block_device.value, "iops", null)
@@ -62,10 +71,4 @@ resource "aws_launch_configuration" "lc" {
   }
 
   depends_on = []
-}
-
-data "template_file" "lc_user_data" {
-  count = var.lc_user_data != null ? 1 : 0
-
-  template = var.lc_user_data
 }

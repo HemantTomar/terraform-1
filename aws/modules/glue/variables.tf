@@ -127,26 +127,6 @@ variable "glue_catalog_table_storage_descriptor" {
   }
 }
 
-variable "storage_descriptor_columns" {
-  description = "(Optional) A list of the Columns in the table."
-  default     = []
-}
-
-variable "storage_descriptor_ser_de_info" {
-  description = "(Optional) Serialization/deserialization (SerDe) information."
-  default     = []
-}
-
-variable "storage_descriptor_sort_columns" {
-  description = "(Optional) A list of Order objects specifying the sort order of each bucket in the table."
-  default     = []
-}
-
-variable "storage_descriptor_skewed_info" {
-  description = "(Optional) Information about values that appear very frequently in a column (skewed values)."
-  default     = []
-}
-
 #---------------------------------------------------
 # AWS Glue classifier
 #---------------------------------------------------
@@ -329,19 +309,9 @@ variable "glue_security_configuration_name" {
   default     = ""
 }
 
-variable "glue_security_configuration_cloudwatch_encryption" {
-  description = "(Required) A cloudwatch_encryption block as described below, which contains encryption configuration for CloudWatch."
-  default     = []
-}
-
-variable "glue_security_configuration_job_bookmarks_encryption" {
-  description = "(Required) A job_bookmarks_encryption block as described below, which contains encryption configuration for job bookmarks."
-  default     = []
-}
-
-variable "glue_security_configuration_s3_encryption" {
-  description = "(Required) A s3_encryption block as described below, which contains encryption configuration for S3 data."
-  default     = []
+variable "glue_security_configuration_encryption_configuration" {
+  description = "Set encryption configuration for Glue security configuration"
+  default     = {}
 }
 
 #---------------------------------------------------
@@ -397,7 +367,7 @@ variable "glue_job_description" {
 
 variable "glue_job_connections" {
   description = "(Optional) The list of connections used for this job."
-  default     = null
+  default     = []
 }
 
 variable "glue_job_additional_connections" {
@@ -419,6 +389,11 @@ variable "glue_job_execution_property" {
 
 variable "glue_job_glue_version" {
   description = "(Optional) The version of glue to use, for example '1.0'. For information about available versions, see the AWS Glue Release Notes."
+  default     = null
+}
+
+variable "glue_job_execution_class" {
+  description = "(Optional) Indicates whether the job is run with a standard or flexible execution class. The standard execution class is ideal for time-sensitive workloads that require fast job startup and dedicated resources. Valid value: FLEX, STANDARD."
   default     = null
 }
 
@@ -502,12 +477,12 @@ variable "glue_trigger_actions" {
 
 variable "glue_trigger_timeouts" {
   description = "Set timeouts for glue trigger"
-  default     = []
+  default     = {}
 }
 
 variable "glue_trigger_predicate" {
   description = "(Optional) A predicate to specify when the new trigger should fire. Required when trigger type is CONDITIONAL"
-  default     = []
+  default     = {}
 }
 
 #---------------------------------------------------
@@ -518,14 +493,9 @@ variable "enable_glue_data_catalog_encryption_settings" {
   default     = false
 }
 
-variable "glue_data_catalog_encryption_settings_connection_password_encryption" {
-  description = "(Required) When connection password protection is enabled, the Data Catalog uses a customer-provided key to encrypt the password as part of CreateConnection or UpdateConnection and store it in the ENCRYPTED_PASSWORD field in the connection properties. You can enable catalog encryption or only password encryption. see Connection Password Encryption."
-  default     = []
-}
-
-variable "glue_data_catalog_encryption_settings_encryption_at_rest" {
-  description = "(Required) Specifies the encryption-at-rest configuration for the Data Catalog. see Encryption At Rest."
-  default     = []
+variable "glue_data_catalog_encryption_settings_data_catalog_encryption_settings" {
+  description = "Set data_catalog_encryption_settings block for Glue data catalog encryption"
+  default     = {}
 }
 
 variable "glue_data_catalog_encryption_settings_catalog_id" {
@@ -707,26 +677,6 @@ variable "glue_partition_parameters" {
   default     = null
 }
 
-variable "glue_partition_storage_descriptor_columns" {
-  description = "(Optional) A list of the Columns in the table."
-  default     = []
-}
-
-variable "glue_partition_storage_descriptor_ser_de_info" {
-  description = "(Optional) Serialization/deserialization (SerDe) information."
-  default     = []
-}
-
-variable "glue_partition_storage_descriptor_sort_columns" {
-  description = "(Optional) A list of Order objects specifying the sort order of each bucket in the table."
-  default     = []
-}
-
-variable "glue_partition_storage_descriptor_skewed_info" {
-  description = "(Optional) Information about values that appear very frequently in a column (skewed values)."
-  default     = []
-}
-
 variable "glue_partition_storage_descriptor" {
   description = "(Optional) A storage descriptor object containing information about the physical storage of this table. You can refer to the Glue Developer Guide for a full explanation of this object."
   default = {
@@ -851,4 +801,37 @@ variable "glue_user_defined_function_catalog_id" {
 variable "glue_user_defined_function_resource_uris" {
   description = "(Optional) The configuration block for Resource URIs. See resource uris below for more details."
   default     = []
+}
+
+#---------------------------------------------------
+# AWS Glue partition index
+#---------------------------------------------------
+variable "enable_glue_partition_index" {
+  description = "Enable glue partition index usage"
+  default     = false
+}
+
+variable "glue_partition_index_table_name" {
+  description = "Name of the table. For Hive compatibility, this must be entirely lowercase."
+  default     = ""
+}
+
+variable "glue_partition_index_database_name" {
+  description = "(Required) Name of the metadata database where the table metadata resides. For Hive compatibility, this must be all lowercase."
+  default     = ""
+}
+
+variable "glue_partition_index_catalog_id" {
+  description = "(Optional) The catalog ID where the table resides."
+  default     = ""
+}
+
+variable "glue_partition_index_partition_index" {
+  description = "(Required) Configuration block for a partition index."
+  default     = []
+}
+
+variable "glue_partition_index_timeouts" {
+  description = "Set timeouts glue partition index"
+  default     = {}
 }

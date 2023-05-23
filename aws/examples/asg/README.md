@@ -8,19 +8,23 @@ A terraform module for making ASG.
 Import the module and retrieve with ```terraform get``` or ```terraform get --update```. Adding a module resource to your template, e.g. `main.tf`:
 
 ```
-#############################################################
-# AWS key pair
-#############################################################
 module "key_pair" {
   source = "../../modules/key_pair"
 
-  enable_key_pair = true
-  key_name        = "test-key"
-  public_key      = file("./additional_files/prod-bastion_ukraine.pub")
+  enable_key_pair          = true
+  key_pair_key_name        = "test"
+  key_pair_key_name_prefix = null
+  key_pair_public_key      = file("/Users/captain/.ssh/id_rsa.pub")
+
+  tags = tomap({
+    "Environment"   = "dev",
+    "Createdby"     = "Vitaliy Natarov",
+    "Orchestration" = "Terraform"
+  })
 }
 
 module "lt" {
-  source      = "../../modules/asg_new"
+  source      = "../../modules/asg"
   name        = "my-first"
   region      = "us-west-2"
   environment = "test"
@@ -28,12 +32,13 @@ module "lt" {
   enable_lt      = true
   lt_name        = ""
   lt_description = null
-  lc_user_data   = null
+  lt_user_data   = null
+  lt_image_id    = "ami-08f72eed8a0d9f8e8"
 
 }
 
-module "asg_new" {
-  source      = "../../modules/asg_new"
+module "asg" {
+  source      = "../../modules/asg"
   name        = "my-first"
   region      = "us-west-2"
   environment = "test"
@@ -47,18 +52,29 @@ module "asg_new" {
   lc_security_groups      = ["sg-07b62c0d0ea37056d"]
   lc_iam_instance_profile = ""
 
-  lc_key_name  = element(module.key_pair.aws_key_id, 0)
+  lc_key_name  = module.key_pair.aws_key_id
   lc_user_data = null #file("./additional_files/bootstrap.sh")
 
   lc_enable_monitoring = "true"
   lc_placement_tenancy = "default"
 
-  lc_root_block_device = [
+  lc_root_block_device = {
+    volume_size = 8
+    volume_type = "gp3"
+  }
+
+  lc_ebs_block_device = [
     {
-      volume_size = "8"
-      volume_type = "gp2"
-    },
+      device_name = "/dev/sdm"
+      volume_size = 50
+      volume_type = "gp3"
+
+      delete_on_termination = null
+      encrypted             = null
+      iops                  = null
+    }
   ]
+
 
   lc_associate_public_ip_address = null
 
@@ -69,6 +85,48 @@ module "asg_new" {
   asg_min_size                  = 0
   asg_desired_capacity          = 1
   asg_wait_for_capacity_timeout = 0
+
+  enable_autoscaling_policy = true
+  autoscaling_policy_stack = [
+    {
+      name                   = "scale_up"
+      scaling_adjustment     = 4
+      adjustment_type        = "ChangeInCapacity"
+      cooldown               = 300
+      autoscaling_group_name = ""
+
+      target_tracking_configuration    = []
+      predictive_scaling_configuration = []
+    },
+    {
+      name                   = "scale_down"
+      scaling_adjustment     = 2
+      adjustment_type        = "ChangeInCapacity"
+      cooldown               = 300
+      autoscaling_group_name = ""
+
+      target_tracking_configuration    = []
+      predictive_scaling_configuration = []
+    },
+    {
+      name                   = "test"
+      adjustment_type        = "ChangeInCapacity"
+      cooldown               = 300
+      autoscaling_group_name = ""
+
+      step_adjustment = [
+        {
+          scaling_adjustment          = 1
+          metric_interval_lower_bound = 1.0
+          metric_interval_upper_bound = 2.0
+        }
+      ]
+
+      target_tracking_configuration    = []
+      predictive_scaling_configuration = []
+    }
+  ]
+
   asg_tags = [
     {
       key                 = "Orchestration"
@@ -79,6 +137,26 @@ module "asg_new" {
       key                 = "Env"
       value               = "stage"
       propagate_at_launch = true
+    }
+  ]
+
+  enable_autoscaling_schedule = true
+  autoscaling_schedule_stack = [
+    {
+      scheduled_action_name  = "scale_out"
+      min_size               = 0
+      max_size               = 0
+      desired_capacity       = 0
+      recurrence             = "0 9 * * *"
+      autoscaling_group_name = ""
+    },
+    {
+      scheduled_action_name  = "scale_in"
+      min_size               = 0
+      max_size               = 0
+      desired_capacity       = 0
+      recurrence             = "0 17 * * *"
+      autoscaling_group_name = ""
     }
   ]
 
@@ -106,7 +184,7 @@ module "asg_new" {
 - `lc_spot_price` - (Optional; Default: On-demand price) The maximum price to use for reserving spot instances. (`default = null`)
 - `lc_ebs_optimized` - (Optional) If true, the launched EC2 instance will be EBS-optimized. (`default = null`)
 - `lc_ebs_block_device` - Additional EBS block devices to attach to the instance (`default = []`)
-- `lc_root_block_device` - Customize details about the root block device of the instance. See Block Devices below for details (`default = []`)
+- `lc_root_block_device` - Customize details about the root block device of the instance. See Block Devices below for details (`default = {}`)
 - `lc_ephemeral_block_device` - Customize Ephemeral (also known as Instance Store) volumes on the instance (`default = []`)
 - `enable_lt` - Enable ASG with launch_template (`default = False`)
 - `lt_name` - The name of the launch template. If you leave this blank, Terraform will auto-generate a unique name. (`default = ""`)
@@ -166,16 +244,23 @@ module "asg_new" {
 - `asg_enabled_metrics` - A list of metrics to collect. The allowed values are GroupMinSize, GroupMaxSize, GroupDesiredCapacity, GroupInServiceInstances, GroupPendingInstances, GroupStandbyInstances, GroupTerminatingInstances, GroupTotalInstances (`default = ['GroupMinSize', 'GroupMaxSize', 'GroupDesiredCapacity', 'GroupInServiceInstances', 'GroupPendingInstances', 'GroupStandbyInstances', 'GroupTerminatingInstances', 'GroupTotalInstances']`)
 - `asg_wait_for_capacity_timeout` - A maximum duration that Terraform should wait for ASG instances to be healthy before timing out. (See also Waiting for Capacity below.) Setting this to '0' causes Terraform to skip all Capacity Waiting behavior. (`default = 10m`)
 - `asg_protect_from_scale_in` - Allows setting instance protection. The autoscaling group will not select instances with this setting for terminination during scale in events. (`default = False`)
-- `asg_timeouts` - Set timeouts for ASG (`default = []`)
+- `asg_timeouts` - Set timeouts for ASG (`default = {}`)
 - `asg_mixed_instances_policy` - (Optional) Configuration block containing settings to define launch targets for Auto Scaling groups. (`default = []`)
 - `asg_initial_lifecycle_hook` - (Optional) One or more Lifecycle Hooks to attach to the autoscaling group before instances are launched. The syntax is exactly the same as the separate aws_autoscaling_lifecycle_hook resource, without the autoscaling_group_name attribute. Please note that this will only work when creating a new autoscaling group. For all other use-cases, please use aws_autoscaling_lifecycle_hook resource. (`default = []`)
 - `asg_max_instance_lifetime` - (Optional) The maximum amount of time, in seconds, that an instance can be in service, values must be either equal to 0 or between 604800 and 31536000 seconds. (`default = null`)
 - `asg_tags` - A list of tag blocks. Each element should have keys named key, value, and propagate_at_launch. (`default = []`)
+- `asg_warm_pool` - (Optional) If this block is configured, add a Warm Pool to the specified Auto Scaling group. (`default = []`)
+- `asg_capacity_rebalance` - (Optional) Indicates whether capacity rebalance is enabled. Otherwise, capacity rebalance is disabled. (`default = null`)
+- `asg_service_linked_role_arn` - (Optional) The ARN of the service-linked role that the ASG will use to call other AWS services (`default = null`)
+- `aws_instance_refresh` - (Optional) If this block is configured, start an Instance Refresh when this Auto Scaling Group is updated. (`default = []`)
+- `enable_asg_tag` - Enable asg tags (`default = False`)
+- `asg_tag_autoscaling_group_name` - Set list of asg names for asg tag resource (`default = []`)
+- `asg_tag_tags` - Set list of tags for asg tag resource (`default = []`)
 - `enable_autoscaling_attachment` - Enable asg attachment (`default = False`)
 - `load_balancer_type` - Type of load balancer. Ex: ELB, ALB etc (`default = ELB`)
 - `load_balancers` - An elastic load balancer name/ALB to add to the autoscaling group names (`default = []`)
 - `autoscaling_group_name` - (Required) Name of ASG to associate with the ELB or ALB. Also, The name of the Auto Scaling group to which you want to assign the lifecycle hoo (`default = ""`)
-- `alb_target_group_arn` - (Optional) The ARN of an ALB Target Group. (`default = null`)
+- `lb_target_group_arn` - (Optional) The ARN of an ALB Target Group. (`default = null`)
 - `enable_autoscaling_lifecycle_hook` - Enable autoscaling lifecycle hook (`default = False`)
 - `autoscaling_lifecycle_hook_name` - (Required) The name of the lifecycle hook. (`default = ""`)
 - `autoscaling_lifecycle_hook_default_result` - Defines the action the Auto Scaling group should take when the lifecycle hook timeout elapses or if an unexpected failure occurs. The value for this parameter can be either CONTINUE or ABANDON. The default value for this parameter is ABANDON. (`default = ABANDON`)
@@ -187,27 +272,11 @@ module "asg_new" {
 - `enable_autoscaling_notification` - Enable autoscaling notification (`default = False`)
 - `autoscaling_groups_filter` - A filter used to scope the list e.g. by tags (`default = []`)
 - `autoscaling_notification_notifications` - (Required) A list of Notification Types that trigger notifications. (`default = ['autoscaling:EC2_INSTANCE_LAUNCH', 'autoscaling:EC2_INSTANCE_TERMINATE', 'autoscaling:EC2_INSTANCE_LAUNCH_ERROR', 'autoscaling:EC2_INSTANCE_TERMINATE_ERROR']`)
-- `autoscaling_notification_topic_arn` - (Required) The Topic ARN for notifications to be sent through (`default = ""`)
+- `autoscaling_notification_topic_arns` - (Required) The Topic ARNs for notifications to be sent through (`default = []`)
 - `enable_autoscaling_policy` - Enabling autoscaling schedule (`default = False`)
-- `autoscaling_policy_scale_up_name` - Set asg policy name for scale up (`default = ""`)
-- `autoscaling_policy_scale_up_scaling_adjustment` - Size of instances to making autoscaling(up/down) (`default = 1`)
-- `autoscaling_policy_scale_up_adjustment_type` - Specifies whether the adjustment is an absolute number or a percentage of the current capacity. Valid values are ChangeInCapacity, ExactCapacity, and PercentChangeInCapacity. (`default = ChangeInCapacity`)
-- `autoscaling_policy_scale_up_cooldown` - (Optional) The amount of time, in seconds, after a scaling activity completes and before the next scaling activity can start. (`default = ""`)
-- `autoscaling_policy_scale_down_name` - Set asg policy name for scale down (`default = ""`)
-- `autoscaling_policy_scale_down_scaling_adjustment` - Size of instances to making autoscaling(up/down) (`default = 1`)
-- `autoscaling_policy_scale_down_adjustment_type` - Specifies whether the adjustment is an absolute number or a percentage of the current capacity. Valid values are ChangeInCapacity, ExactCapacity, and PercentChangeInCapacity. (`default = ChangeInCapacity`)
-- `autoscaling_policy_scale_down_cooldown` - (Optional) The amount of time, in seconds, after a scaling activity completes and before the next scaling activity can start. (`default = ""`)
+- `autoscaling_policy_stack` - Set autoscaling policy as stack (`default = []`)
 - `enable_autoscaling_schedule` - Enabling autoscaling schedule (`default = False`)
-- `autoscaling_schedule_scale_out_name` - Set scheduled action name for scale out time (`default = ""`)
-- `autoscaling_schedule_scale_out_min_size` - (Optional) The minimum size for the Auto Scaling group. Default 0. Set to -1 if you don't want to change the minimum size at the scheduled time. (`default = 0`)
-- `autoscaling_schedule_scale_out_max_size` - (Optional) The maximum size for the Auto Scaling group. Default 0. Set to -1 if you don't want to change the maximum size at the scheduled time. (`default = 0`)
-- `autoscaling_schedule_scale_out_desired_capacity` - (Optional) The number of EC2 instances that should be running in the group. Default 0. Set to -1 if you don't want to change the desired capacity at the scheduled time. (`default = 0`)
-- `autoscaling_schedule_scale_out_recurrence` - Cronjob time for scale-up (`default = 0 9 * * *`)
-- `autoscaling_schedule_scale_in_name` - Set scheduled action name for scale in time (`default = ""`)
-- `autoscaling_schedule_scale_in_min_size` - (Optional) The minimum size for the Auto Scaling group. Default 0. Set to -1 if you don't want to change the minimum size at the scheduled time. (`default = 0`)
-- `autoscaling_schedule_scale_in_max_size` - (Optional) The maximum size for the Auto Scaling group. Default 0. Set to -1 if you don't want to change the maximum size at the scheduled time. (`default = 0`)
-- `autoscaling_schedule_scale_in_desired_capacity` - (Optional) The number of EC2 instances that should be running in the group. Default 0. Set to -1 if you don't want to change the desired capacity at the scheduled time. (`default = 0`)
-- `autoscaling_schedule_scale_in_recurrence` - Cronjob time for scale-down (`default = 0 17 * * *`)
+- `autoscaling_schedule_stack` - Set autoscaling schedule as stack (`default = []`)
 
 ## Module Output Variables
 ----------------------
@@ -227,6 +296,7 @@ module "asg_new" {
 - `autoscaling_group_default_cooldown` - Time between a scaling activity and the succeeding scaling activity
 - `autoscaling_group_health_check_grace_period` - Time after instance comes into service before checking health
 - `autoscaling_group_health_check_type` - EC2 or ELB. Controls how health checking is done
+- `asg_tag_id` - ASG name and key, separated by a comma
 
 
 ## Authors

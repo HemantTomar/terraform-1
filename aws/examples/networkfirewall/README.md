@@ -25,15 +25,13 @@ module "networkfirewall" {
   name        = "TEST"
   environment = "stage"
 }
+
 ```
 
 ## Module Input Variables
 ----------------------
 - `name` - Name to be used on all resources as prefix (`default = TEST`)
-- `region` - The region where to deploy this code (e.g. us-east-1). (`default = us-east-1`)
 - `environment` - Environment for service (`default = STAGE`)
-- `orchestration` - Type of orchestration (`default = Terraform`)
-- `createdby` - Created by (`default = Vitaliy Natarov`)
 - `tags` - A list of tag blocks. Each element should have keys named key, value, etc. (`default = {}`)
 
 ## Module Output Variables

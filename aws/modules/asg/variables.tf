@@ -23,6 +23,11 @@ variable "ami" {
     us-west-2 = "ami-3ecc8f46"
     eu-west-1 = "ami-6e28b517"
   }
+
+  // validation {
+  //   condition     = length(var.ami[.var.region]) > 4 && substr(var.ami[.var.region], 0, 4) == "ami-"
+  //   error_message = "The image_id value must be a valid AMI id, starting with \"ami-\"."
+  // }
 }
 
 #-----------------------------------------------------------
@@ -46,6 +51,11 @@ variable "lc_name_prefix" {
 variable "lc_image_id" {
   description = "The EC2 image ID to launch."
   default     = ""
+
+  // validation {
+  //   condition     = length(var.lc_image_id) > 4 && substr(var.lc_image_id, 0, 4) == "ami-"
+  //   error_message = "The image_id value must be a valid AMI id, starting with \"ami-\"."
+  // }
 }
 
 variable "lc_instance_type" {
@@ -105,7 +115,7 @@ variable "lc_ebs_block_device" {
 
 variable "lc_root_block_device" {
   description = "Customize details about the root block device of the instance. See Block Devices below for details"
-  default     = []
+  default     = {}
 }
 
 variable "lc_ephemeral_block_device" {
@@ -149,6 +159,11 @@ variable "lt_update_default_version" {
 variable "lt_image_id" {
   description = "The AMI from which to launch the instance."
   default     = ""
+
+  // validation {
+  //   condition     = length(var.lt_image_id) > 4 && substr(var.lt_image_id, 0, 4) == "ami-"
+  //   error_message = "The image_id value must be a valid AMI id, starting with \"ami-\"."
+  // }
 }
 
 variable "lt_kernel_id" {
@@ -436,7 +451,7 @@ variable "asg_protect_from_scale_in" {
 
 variable "asg_timeouts" {
   description = "Set timeouts for ASG"
-  default     = []
+  default     = {}
 }
 
 variable "asg_mixed_instances_policy" {
@@ -457,6 +472,44 @@ variable "asg_max_instance_lifetime" {
 variable "asg_tags" {
   description = "A list of tag blocks. Each element should have keys named key, value, and propagate_at_launch."
   type        = list(map(string))
+  default     = []
+}
+
+variable "asg_warm_pool" {
+  description = "(Optional) If this block is configured, add a Warm Pool to the specified Auto Scaling group."
+  default     = []
+}
+
+variable "asg_capacity_rebalance" {
+  description = "(Optional) Indicates whether capacity rebalance is enabled. Otherwise, capacity rebalance is disabled."
+  default     = null
+}
+
+variable "asg_service_linked_role_arn" {
+  description = "(Optional) The ARN of the service-linked role that the ASG will use to call other AWS services"
+  default     = null
+}
+
+variable "aws_instance_refresh" {
+  description = "(Optional) If this block is configured, start an Instance Refresh when this Auto Scaling Group is updated."
+  default     = []
+}
+
+#---------------------------------------------------
+# AWS ASG tag
+#---------------------------------------------------
+variable "enable_asg_tag" {
+  description = "Enable asg tags"
+  default     = false
+}
+
+variable "asg_tag_autoscaling_group_name" {
+  description = "Set list of asg names for asg tag resource"
+  default     = []
+}
+
+variable "asg_tag_tags" {
+  description = "Set list of tags for asg tag resource"
   default     = []
 }
 
@@ -483,7 +536,7 @@ variable "autoscaling_group_name" {
   default     = ""
 }
 
-variable "alb_target_group_arn" {
+variable "lb_target_group_arn" {
   description = "(Optional) The ARN of an ALB Target Group."
   default     = null
 }
@@ -554,9 +607,9 @@ variable "autoscaling_notification_notifications" {
   ]
 }
 
-variable "autoscaling_notification_topic_arn" {
-  description = "(Required) The Topic ARN for notifications to be sent through"
-  default     = ""
+variable "autoscaling_notification_topic_arns" {
+  description = "(Required) The Topic ARNs for notifications to be sent through"
+  default     = []
 }
 
 #-----------------------------------------------------------
@@ -567,44 +620,9 @@ variable "enable_autoscaling_policy" {
   default     = false
 }
 
-variable "autoscaling_policy_scale_up_name" {
-  description = "Set asg policy name for scale up"
-  default     = ""
-}
-
-variable "autoscaling_policy_scale_up_scaling_adjustment" {
-  description = "Size of instances to making autoscaling(up/down)"
-  default     = 1
-}
-
-variable "autoscaling_policy_scale_up_adjustment_type" {
-  description = "Specifies whether the adjustment is an absolute number or a percentage of the current capacity. Valid values are ChangeInCapacity, ExactCapacity, and PercentChangeInCapacity."
-  default     = "ChangeInCapacity"
-}
-
-variable "autoscaling_policy_scale_up_cooldown" {
-  description = "(Optional) The amount of time, in seconds, after a scaling activity completes and before the next scaling activity can start."
-  default     = ""
-}
-
-variable "autoscaling_policy_scale_down_name" {
-  description = "Set asg policy name for scale down"
-  default     = ""
-}
-
-variable "autoscaling_policy_scale_down_scaling_adjustment" {
-  description = "Size of instances to making autoscaling(up/down)"
-  default     = 1
-}
-
-variable "autoscaling_policy_scale_down_adjustment_type" {
-  description = "Specifies whether the adjustment is an absolute number or a percentage of the current capacity. Valid values are ChangeInCapacity, ExactCapacity, and PercentChangeInCapacity."
-  default     = "ChangeInCapacity"
-}
-
-variable "autoscaling_policy_scale_down_cooldown" {
-  description = "(Optional) The amount of time, in seconds, after a scaling activity completes and before the next scaling activity can start."
-  default     = ""
+variable "autoscaling_policy_stack" {
+  description = "Set autoscaling policy as stack"
+  default     = []
 }
 
 #-----------------------------------------------------------
@@ -615,52 +633,7 @@ variable "enable_autoscaling_schedule" {
   default     = false
 }
 
-variable "autoscaling_schedule_scale_out_name" {
-  description = "Set scheduled action name for scale out time"
-  default     = ""
-}
-
-variable "autoscaling_schedule_scale_out_min_size" {
-  description = "(Optional) The minimum size for the Auto Scaling group. Default 0. Set to -1 if you don't want to change the minimum size at the scheduled time."
-  default     = 0
-}
-
-variable "autoscaling_schedule_scale_out_max_size" {
-  description = "(Optional) The maximum size for the Auto Scaling group. Default 0. Set to -1 if you don't want to change the maximum size at the scheduled time."
-  default     = 0
-}
-
-variable "autoscaling_schedule_scale_out_desired_capacity" {
-  description = "(Optional) The number of EC2 instances that should be running in the group. Default 0. Set to -1 if you don't want to change the desired capacity at the scheduled time."
-  default     = 0
-}
-
-variable "autoscaling_schedule_scale_out_recurrence" {
-  description = "Cronjob time for scale-up"
-  default     = "0 9 * * *"
-}
-
-variable "autoscaling_schedule_scale_in_name" {
-  description = "Set scheduled action name for scale in time"
-  default     = ""
-}
-
-variable "autoscaling_schedule_scale_in_min_size" {
-  description = "(Optional) The minimum size for the Auto Scaling group. Default 0. Set to -1 if you don't want to change the minimum size at the scheduled time."
-  default     = 0
-}
-
-variable "autoscaling_schedule_scale_in_max_size" {
-  description = "(Optional) The maximum size for the Auto Scaling group. Default 0. Set to -1 if you don't want to change the maximum size at the scheduled time."
-  default     = 0
-}
-
-variable "autoscaling_schedule_scale_in_desired_capacity" {
-  description = "(Optional) The number of EC2 instances that should be running in the group. Default 0. Set to -1 if you don't want to change the desired capacity at the scheduled time."
-  default     = 0
-}
-
-variable "autoscaling_schedule_scale_in_recurrence" {
-  description = "Cronjob time for scale-down"
-  default     = "0 17 * * *"
+variable "autoscaling_schedule_stack" {
+  description = "Set autoscaling schedule as stack"
+  default     = []
 }

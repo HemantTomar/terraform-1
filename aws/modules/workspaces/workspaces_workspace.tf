@@ -15,6 +15,7 @@ resource "aws_workspaces_workspace" "workspaces_workspace" {
   dynamic "workspace_properties" {
     iterator = workspace_properties
     for_each = var.workspaces_workspace_workspace_properties
+
     content {
       compute_type_name                         = lookup(workspace_properties.value, "compute_type_name", null)
       user_volume_size_gib                      = lookup(workspace_properties.value, "user_volume_size_gib", null)
@@ -26,7 +27,8 @@ resource "aws_workspaces_workspace" "workspaces_workspace" {
 
   dynamic "timeouts" {
     iterator = timeouts
-    for_each = var.workspaces_workspace_timeouts
+    for_each = length(keys(var.workspaces_workspace_timeouts)) > 0 ? [var.workspaces_workspace_timeouts] : []
+
     content {
       create = lookup(timeouts.value, "create", null)
       update = lookup(timeouts.value, "update", null)

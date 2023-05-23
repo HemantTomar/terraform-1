@@ -53,11 +53,6 @@ variable "enable_dms_endpoint" {
   default     = false
 }
 
-variable "dms_endpoint_name" {
-  description = "Set name for dms endpoint"
-  default     = ""
-}
-
 variable "dms_endpoint_endpoint_type" {
   description = "(Required) The type of endpoint. Can be one of source | target."
   default     = null
@@ -156,11 +151,6 @@ variable "enable_dms_replication_subnet_group" {
   default     = false
 }
 
-variable "dms_replication_subnet_group_name" {
-  description = "Set name for dms replication subnet group"
-  default     = ""
-}
-
 variable "dms_replication_subnet_group_replication_subnet_group_description" {
   description = "The description for the subnet group."
   default     = ""
@@ -182,11 +172,6 @@ variable "dms_replication_subnet_group_subnet_ids" {
 variable "enable_dms_replication_instance" {
   description = "Enable dms replication instance usage"
   default     = false
-}
-
-variable "dms_replication_instance_name" {
-  description = "Set name for dms replication instance"
-  default     = ""
 }
 
 variable "dms_replication_instance_replication_instance_class" {
@@ -270,11 +255,6 @@ variable "dms_replication_instance_timeouts" {
 variable "enable_dms_replication_task" {
   description = "Enable dms replication task usage"
   default     = false
-}
-
-variable "dms_replication_task_name" {
-  description = "Set name for dms replication task"
-  default     = ""
 }
 
 variable "dms_replication_task_migration_type" {

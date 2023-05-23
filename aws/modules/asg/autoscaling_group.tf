@@ -1,5 +1,5 @@
 #---------------------------------------------------
-# Create AWS ASG
+# AWS ASG
 #---------------------------------------------------
 resource "aws_autoscaling_group" "asg" {
   count = var.enable_asg ? 1 : 0
@@ -8,12 +8,15 @@ resource "aws_autoscaling_group" "asg" {
   name_prefix = var.asg_name_prefix != null ? var.asg_name_prefix : (var.asg_name != "" ? null : var.asg_name_prefix)
   # verify LC & LT
   launch_configuration = var.asg_launch_configuration != "" ? var.asg_launch_configuration : (length(var.asg_launch_template) == 0 ? element(concat(aws_launch_configuration.lc.*.name, [""]), 0) : null)
+
   # vpc_zone_identifier or availability_zones!!!!
   vpc_zone_identifier = length(var.asg_vpc_zone_identifier) > 0 ? var.asg_vpc_zone_identifier : null
   availability_zones  = length(var.asg_vpc_zone_identifier) == 0 ? split(",", (lookup(var.asg_availability_zones, var.region))) : null
-  max_size            = var.asg_max_size
-  min_size            = var.asg_min_size
-  desired_capacity    = var.asg_desired_capacity
+
+  max_size           = var.asg_max_size
+  min_size           = var.asg_min_size
+  desired_capacity   = var.asg_desired_capacity
+  capacity_rebalance = var.asg_capacity_rebalance
 
   health_check_grace_period = var.asg_health_check_grace_period
   health_check_type         = upper(var.asg_health_check_type)
@@ -33,29 +36,52 @@ resource "aws_autoscaling_group" "asg" {
   wait_for_capacity_timeout = var.asg_wait_for_capacity_timeout
   protect_from_scale_in     = var.asg_protect_from_scale_in
   max_instance_lifetime     = var.asg_max_instance_lifetime
+  service_linked_role_arn   = var.asg_service_linked_role_arn
 
   dynamic "mixed_instances_policy" {
     iterator = mixed_instances_policy
     for_each = var.asg_mixed_instances_policy
-    content {
-      instances_distribution {
-        on_demand_allocation_strategy            = lookup(mixed_instances_policy.value, "on_demand_allocation_strategy", null)
-        on_demand_base_capacity                  = lookup(mixed_instances_policy.value, "on_demand_base_capacity", null)
-        on_demand_percentage_above_base_capacity = lookup(mixed_instances_policy.value, "on_demand_percentage_above_base_capacity", null)
-        spot_allocation_strategy                 = lookup(mixed_instances_policy.value, "spot_allocation_strategy", null)
-        spot_instance_pools                      = lookup(mixed_instances_policy.value, "spot_instance_pools", null)
-        spot_max_price                           = lookup(mixed_instances_policy.value, "spot_max_price", null)
-      }
-      launch_template {
-        launch_template_specification {
-          launch_template_name = lookup(mixed_instances_policy.value, "launch_template_name", null)
-          launch_template_id   = lookup(mixed_instances_policy.value, "launch_template_id", null)
-          version              = lookup(mixed_instances_policy.value, "version", "$Default")
-        }
 
-        override {
-          instance_type     = lookup(mixed_instances_policy.value, "instance_type", null)
-          weighted_capacity = lookup(mixed_instances_policy.value, "weighted_capacity", null)
+    content {
+      dynamic "instances_distribution" {
+        iterator = instances_distribution
+        for_each = lookup(mixed_instances_policy.value, "instances_distribution", [])
+
+        content {
+          on_demand_allocation_strategy            = lookup(instances_distribution.value, "on_demand_allocation_strategy", null)
+          on_demand_base_capacity                  = lookup(instances_distribution.value, "on_demand_base_capacity", null)
+          on_demand_percentage_above_base_capacity = lookup(instances_distribution.value, "on_demand_percentage_above_base_capacity", null)
+          spot_allocation_strategy                 = lookup(instances_distribution.value, "spot_allocation_strategy", null)
+          spot_instance_pools                      = lookup(instances_distribution.value, "spot_instance_pools", null)
+          spot_max_price                           = lookup(instances_distribution.value, "spot_max_price", null)
+        }
+      }
+
+      dynamic "launch_template" {
+        iterator = launch_template
+        for_each = lookup(mixed_instances_policy.value, "launch_template", [])
+
+        content {
+          dynamic "launch_template_specification" {
+            iterator = launch_template_specification
+            for_each = lookup(launch_template.value, "launch_template_specification", [])
+
+            content {
+              launch_template_name = lookup(launch_template_specification.value, "launch_template_name", null)
+              launch_template_id   = lookup(launch_template_specification.value, "launch_template_id", null)
+              version              = lookup(launch_template_specification.value, "version", "$Default")
+            }
+          }
+
+          dynamic "override" {
+            iterator = override
+            for_each = lookup(launch_template.value, "override", [])
+
+            content {
+              instance_type     = lookup(override.value, "instance_type", null)
+              weighted_capacity = lookup(override.value, "weighted_capacity", null)
+            }
+          }
         }
       }
     }
@@ -64,6 +90,7 @@ resource "aws_autoscaling_group" "asg" {
   dynamic "launch_template" {
     iterator = launch_template
     for_each = var.asg_launch_template
+
     content {
       id      = lookup(launch_template.value, "id", null)
       name    = lookup(launch_template.value, "name", null)
@@ -74,6 +101,7 @@ resource "aws_autoscaling_group" "asg" {
   dynamic "initial_lifecycle_hook" {
     iterator = initial_lifecycle_hook
     for_each = var.asg_initial_lifecycle_hook
+
     content {
       name                 = lookup(initial_lifecycle_hook.value, "name", null)
       default_result       = lookup(initial_lifecycle_hook.value, "default_result", null)
@@ -88,22 +116,57 @@ resource "aws_autoscaling_group" "asg" {
 
   dynamic "timeouts" {
     iterator = timeouts
-    for_each = var.asg_timeouts
+    for_each = length(keys(var.asg_timeouts)) > 0 ? [var.asg_timeouts] : []
+
     content {
       delete = lookup(timeouts.value, "delete", null)
     }
   }
 
-  tags = concat(
-    [
-      {
-        key                 = "Name"
-        value               = var.asg_name != "" ? var.asg_name : (var.asg_name_prefix == null ? "${lower(var.name)}-asg-${lower(var.environment)}" : var.asg_name_prefix)
-        propagate_at_launch = true
+  dynamic "warm_pool" {
+    iterator = warm_pool
+    for_each = var.asg_warm_pool
+
+    content {
+      pool_state                  = lookup(warm_pool.value, "pool_state ", null)
+      min_size                    = lookup(warm_pool.value, "min_size ", null)
+      max_group_prepared_capacity = lookup(warm_pool.value, "max_group_prepared_capacity ", null)
+    }
+  }
+
+  dynamic "instance_refresh" {
+    iterator = instance_refresh
+    for_each = var.aws_instance_refresh
+
+    content {
+      strategy = lookup(instance_refresh.value, "strategy ", null)
+
+      triggers = lookup(warm_pool.value, "triggers ", null)
+
+      dynamic "preferences" {
+        iterator = preferences
+        for_each = lookup(instance_refresh.value, "preferences", [])
+
+        content {
+          checkpoint_delay       = lookup(preferences.value, "checkpoint_delay ", null)
+          checkpoint_percentages = lookup(preferences.value, "checkpoint_percentages ", null)
+          instance_warmup        = lookup(preferences.value, "instance_warmup ", null)
+          min_healthy_percentage = lookup(preferences.value, "min_healthy_percentage ", null)
+        }
       }
-    ],
-    var.asg_tags
-  )
+    }
+  }
+
+  dynamic "tag" {
+    iterator = tag
+    for_each = var.asg_tags
+
+    content {
+      key                 = lookup(tag.value, "key", null)
+      value               = lookup(tag.value, "value", null)
+      propagate_at_launch = lookup(tag.value, "propagate_at_launch", null)
+    }
+  }
 
   lifecycle {
     create_before_destroy = false

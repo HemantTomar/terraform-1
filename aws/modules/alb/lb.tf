@@ -45,7 +45,7 @@ resource "aws_lb" "alb" {
 
   dynamic "timeouts" {
     iterator = timeouts
-    for_each = var.alb_timeouts
+    for_each = length(keys(var.alb_timeouts)) > 0 ? [var.alb_timeouts] : []
 
     content {
       create = lookup(timeouts.value, "create", null)
@@ -54,17 +54,17 @@ resource "aws_lb" "alb" {
     }
   }
 
-  lifecycle {
-    create_before_destroy = true
-    ignore_changes        = []
-  }
-
   tags = merge(
     {
       Name = var.alb_name != "" ? var.alb_name : (var.alb_name_prefix == null ? "${lower(var.name)}-alb-${lower(var.environment)}" : var.alb_name_prefix)
     },
     var.tags
   )
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes        = []
+  }
 
   depends_on = []
 }

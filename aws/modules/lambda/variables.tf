@@ -127,7 +127,7 @@ variable "lambda_function_environment" {
 
 variable "lambda_function_timeouts" {
   description = "Set timeouts for AWS Lambda"
-  default     = []
+  default     = {}
 }
 
 #---------------------------------------------------
@@ -227,8 +227,8 @@ variable "lambda_event_source_mapping_bisect_batch_on_function_error" {
 }
 
 variable "lambda_event_source_mapping_destination_config" {
-  description = " (Optional) An Amazon SQS queue or Amazon SNS topic destination for failed records. Only available for stream sources (DynamoDB and Kinesis). "
-  default     = null
+  description = "(Optional) An Amazon SQS queue or Amazon SNS topic destination for failed records. Only available for stream sources (DynamoDB and Kinesis). "
+  default     = []
 }
 
 #---------------------------------------------------
@@ -342,7 +342,7 @@ variable "lambda_provisioned_concurrency_config_provisioned_concurrent_execution
 
 variable "lambda_provisioned_concurrency_config_timeouts" {
   description = "aws_lambda_provisioned_concurrency_config provides the following Timeouts configuration options that can be set up"
-  default     = []
+  default     = {}
 }
 
 #---------------------------------------------------

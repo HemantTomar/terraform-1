@@ -1,6 +1,16 @@
 #---------------------------------------------------
 # AWS Lambda function
 #---------------------------------------------------
+output "lambda_function_id" {
+  description = "The Amazon Resource Name (ID) identifying your Lambda Function."
+  value       = element(concat(aws_lambda_function.lambda_function.*.id, [""]), 0)
+}
+
+output "lambda_function_name" {
+  description = "The Amazon Resource Name (name) identifying your Lambda Function."
+  value       = element(concat(aws_lambda_function.lambda_function.*.function_name, [""]), 0)
+}
+
 output "lambda_function_arn" {
   description = "The Amazon Resource Name (ARN) identifying your Lambda Function."
   value       = element(concat(aws_lambda_function.lambda_function.*.arn, [""]), 0)
@@ -31,6 +41,11 @@ output "lambda_function_source_code_size" {
   value       = element(concat(aws_lambda_function.lambda_function.*.source_code_size, [""]), 0)
 }
 
+output "lambda_function_invoke_arn" {
+  description = "ARN to be used for invoking Lambda Function from API Gateway - to be used in aws_api_gateway_integration's uri."
+  value       = element(concat(aws_lambda_function.lambda_function.*.invoke_arn, [""]), 0)
+}
+
 #---------------------------------------------------
 # AWS lambda alias
 #---------------------------------------------------
@@ -47,11 +62,6 @@ output "lambda_alias_invoke_arn" {
 #---------------------------------------------------
 # AWS lambda event source mapping
 #---------------------------------------------------
-output "lambda_event_source_mapping_function_arn" {
-  description = "The the ARN of the Lambda function the event source mapping is sending events to. (Note: this is a computed value that differs from function_name above.)"
-  value       = element(concat(aws_lambda_event_source_mapping.lambda_event_source_mapping.*.arn, [""]), 0)
-}
-
 output "lambda_event_source_mapping_last_modifiedn" {
   description = "The date this resource was last modified."
   value       = element(concat(aws_lambda_event_source_mapping.lambda_event_source_mapping.*.last_modified, [""]), 0)

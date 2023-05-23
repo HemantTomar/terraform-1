@@ -16,7 +16,14 @@ resource "aws_vpc_peering_connection_accepter" "vpc_peering_connection_accepter"
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes        = []
+    # There is no AWS EC2 API for reading auto_accept
+    ignore_changes = [
+      auto_accept,
+      accept_status,
+      id,
+      accepter,
+      requester
+    ]
   }
 
   depends_on = [

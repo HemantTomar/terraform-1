@@ -82,6 +82,7 @@ module "lambda" {
     "Orchestration" = "Terraform"
   })
 }
+
 ```
 
 ## Module Input Variables
@@ -110,7 +111,7 @@ module "lambda" {
 - `lambda_function_kms_key_arn` - (Optional) Amazon Resource Name (ARN) of the AWS Key Management Service (KMS) key that is used to encrypt environment variables. If this configuration is not provided when environment variables are in use, AWS Lambda uses a default service key. If this configuration is provided when environment variables are not in use, the AWS Lambda API does not save this configuration and Terraform will show a perpetual difference of adding the key. To fix the perpetual difference, remove this configuration. (`default = null`)
 - `lambda_function_source_code_hash` - (Optional) Used to trigger updates. Must be set to a base64-encoded SHA256 hash of the package file specified with either filename or s3_key. The usual way to set this is filebase64sha256('file.zip') (Terraform 0.11.12 and later) or base64sha256(file('file.zip')) (Terraform 0.11.11 and earlier), where 'file.zip' is the local filename of the lambda function source archive. (`default = null`)
 - `lambda_function_environment` - (Optional) The Lambda environment's configuration settings. (`default = null`)
-- `lambda_function_timeouts` - Set timeouts for AWS Lambda (`default = []`)
+- `lambda_function_timeouts` - Set timeouts for AWS Lambda (`default = {}`)
 - `enable_lambda_alias` - Enable AWS LAmbda alias usage (`default = False`)
 - `lambda_alias_name` - Name for the alias you are creating. Pattern: (?!^[0-9]+$)([a-zA-Z0-9-_]+) (`default = ""`)
 - `lambda_alias_description` - (Optional) Description of the alias. (`default = null`)
@@ -129,7 +130,7 @@ module "lambda" {
 - `lambda_event_source_mapping_maximum_retry_attempts` - (Optional) The maximum number of times to retry when the function returns an error. Only available for stream sources (DynamoDB and Kinesis). Minimum of 0, maximum and default of 10000. (`default = 10000`)
 - `lambda_event_source_mapping_maximum_record_age_in_seconds` - (Optional) The maximum age of a record that Lambda sends to a function for processing. Only available for stream sources (DynamoDB and Kinesis). Minimum of 60, maximum and default of 604800. (`default = 604800`)
 - `lambda_event_source_mapping_bisect_batch_on_function_error` - (Optional) If the function returns an error, split the batch in two and retry. Only available for stream sources (DynamoDB and Kinesis). Defaults to false. (`default = False`)
-- `lambda_event_source_mapping_destination_config` -  (Optional) An Amazon SQS queue or Amazon SNS topic destination for failed records. Only available for stream sources (DynamoDB and Kinesis).  (`default = null`)
+- `lambda_event_source_mapping_destination_config` - (Optional) An Amazon SQS queue or Amazon SNS topic destination for failed records. Only available for stream sources (DynamoDB and Kinesis).  (`default = []`)
 - `enable_lambda_function_event_invoke_config` - Enable lambda function event invoke config usage (`default = False`)
 - `lambda_function_event_invoke_config_function_name` - Name or Amazon Resource Name (ARN) of the Lambda Function, omitting any version or alias qualifier. (`default = ""`)
 - `lambda_function_event_invoke_config_qualifier` - (Optional) Lambda Function published version, $LATEST, or Lambda Alias name. (`default = ""`)
@@ -150,7 +151,7 @@ module "lambda" {
 - `lambda_provisioned_concurrency_config_function_name` - Name or Amazon Resource Name (ARN) of the Lambda Function. (`default = ""`)
 - `lambda_provisioned_concurrency_config_qualifier` - Lambda Function version or Lambda Alias name. (`default = ""`)
 - `lambda_provisioned_concurrency_config_provisioned_concurrent_executions` - (Required) Amount of capacity to allocate. Must be greater than or equal to 1. (`default = 1`)
-- `lambda_provisioned_concurrency_config_timeouts` - aws_lambda_provisioned_concurrency_config provides the following Timeouts configuration options that can be set up (`default = []`)
+- `lambda_provisioned_concurrency_config_timeouts` - aws_lambda_provisioned_concurrency_config provides the following Timeouts configuration options that can be set up (`default = {}`)
 - `enable_lambda_permission` - Enable lambda permission (`default = False`)
 - `lambda_permission_action` - (Required) The AWS Lambda action you want to allow in this statement. (e.g. lambda:InvokeFunction) (`default = null`)
 - `lambda_permission_function_name` - Name of the Lambda function whose resource policy you are updating (`default = ""`)
@@ -168,15 +169,17 @@ module "lambda" {
 
 ## Module Output Variables
 ----------------------
+- `lambda_function_id` - The Amazon Resource Name (ID) identifying your Lambda Function.
+- `lambda_function_name` - The Amazon Resource Name (name) identifying your Lambda Function.
 - `lambda_function_arn` - The Amazon Resource Name (ARN) identifying your Lambda Function.
 - `lambda_function_qualified_arn` - The Amazon Resource Name (ARN) identifying your Lambda Function Version (if versioning is enabled via publish = true).
 - `lambda_function_last_modified` - The date this resource was last modified.
 - `lambda_function_kms_key_arn` - (Optional) The ARN for the KMS encryption key.
 - `lambda_function_source_code_hash` - Base64-encoded representation of raw SHA-256 sum of the zip file, provided either via filename or s3_* parameters.
 - `lambda_function_source_code_size` - The size in bytes of the function .zip file.
+- `lambda_function_invoke_arn` - ARN to be used for invoking Lambda Function from API Gateway - to be used in aws_api_gateway_integration's uri.
 - `lambda_alias_arn` - The Amazon Resource Name (ARN) identifying your Lambda function alias.
 - `lambda_alias_invoke_arn` - The ARN to be used for invoking Lambda Function from API Gateway - to be used in aws_api_gateway_integration's uri
-- `lambda_event_source_mapping_function_arn` - The the ARN of the Lambda function the event source mapping is sending events to. (Note: this is a computed value that differs from function_name above.)
 - `lambda_event_source_mapping_last_modifiedn` - The date this resource was last modified.
 - `lambda_event_source_mapping_last_processing_result` - The result of the last AWS Lambda invocation of your Lambda function.
 - `lambda_event_source_mapping_state` - The state of the event source mapping.

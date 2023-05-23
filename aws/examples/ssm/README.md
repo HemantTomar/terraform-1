@@ -54,6 +54,7 @@ module "ssm" {
     "Orchestration" = "Terraform"
   })
 }
+
 ```
 
 ## Module Input Variables
@@ -71,7 +72,6 @@ module "ssm" {
 - `ssm_association_name` - The name of the SSM document to apply. (`default = ""`)
 - `ssm_association_association_name` - (Optional) The descriptive name for the association. (`default = null`)
 - `ssm_association_document_version` - (Optional) The document version you want to associate with the target(s). Can be a specific version or the default version. (`default = null`)
-- `ssm_association_instance_id` - (Optional) The instance ID to apply an SSM document to. Use targets with key InstanceIds for document schema versions 2.0 and above. (`default = null`)
 - `ssm_association_parameters` - (Optional) A block of arbitrary string parameters to pass to the SSM document. (`default = null`)
 - `ssm_association_schedule_expression` - (Optional) A cron expression when the association will be applied to the target(s). (`default = null`)
 - `ssm_association_compliance_severity` - (Optional) The compliance severity for the association. Can be one of the following: UNSPECIFIED, LOW, MEDIUM, HIGH or CRITICAL (`default = UNSPECIFIED`)
@@ -80,6 +80,8 @@ module "ssm" {
 - `ssm_association_automation_target_parameter_name` - (Optional) Specify the target for the association. This target is required for associations that use an Automation document and target resources by using rate controls. (`default = null`)
 - `ssm_association_output_location` - (Optional) An output location block. (`default = []`)
 - `ssm_association_targets` - (Optional) A block containing the targets of the SSM association. Targets are documented below. AWS currently supports a maximum of 5 targets. (`default = []`)
+- `ssm_association_apply_only_at_cron_interval` - (Optional) By default, when you create a new or update associations, the system runs it immediately and then according to the schedule you specified. Enable this option if you do not want an association to run immediately after you create or update it. This parameter is not supported for rate expressions. Default: false. (`default = null`)
+- `ssm_association_wait_for_success_timeout_seconds` - (Optional) The number of seconds to wait for the association status to be Success. If Success status is not reached within the given time, create opration will fail. (`default = null`)
 - `enable_ssm_document` - Enable ssm document usage (`default = False`)
 - `ssm_document_name` - The name of the document. (`default = ""`)
 - `ssm_document_document_type` - (Required) The type of the document. Valid document types include: Automation, Command, Package, Policy, and Session (`default = Command`)

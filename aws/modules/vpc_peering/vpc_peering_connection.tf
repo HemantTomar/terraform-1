@@ -13,7 +13,7 @@ resource "aws_vpc_peering_connection" "vpc_peering_connection" {
 
   dynamic "accepter" {
     iterator = accepter
-    for_each = var.vpc_peering_connection_accepter
+    for_each = length(keys(var.vpc_peering_connection_accepter)) > 0 ? [var.vpc_peering_connection_accepter] : []
 
     content {
       allow_remote_vpc_dns_resolution  = lookup(accepter.value, "allow_remote_vpc_dns_resolution", null)
@@ -24,7 +24,7 @@ resource "aws_vpc_peering_connection" "vpc_peering_connection" {
 
   dynamic "requester" {
     iterator = requester
-    for_each = var.vpc_peering_connection_requester
+    for_each = length(keys(var.vpc_peering_connection_requester)) > 0 ? [var.vpc_peering_connection_requester] : []
 
     content {
       allow_remote_vpc_dns_resolution  = lookup(requester.value, "allow_remote_vpc_dns_resolution", null)
@@ -35,7 +35,7 @@ resource "aws_vpc_peering_connection" "vpc_peering_connection" {
 
   dynamic "timeouts" {
     iterator = timeouts
-    for_each = var.vpc_peering_connection_timeouts
+    for_each = length(keys(var.vpc_peering_connection_timeouts)) > 0 ? [var.vpc_peering_connection_timeouts] : []
 
     content {
       create = lookup(timeouts.value, "create", null)
@@ -53,7 +53,13 @@ resource "aws_vpc_peering_connection" "vpc_peering_connection" {
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes        = []
+    ignore_changes = [
+      auto_accept,
+      accept_status,
+      id,
+      accepter,
+      requester
+    ]
   }
 
   depends_on = []

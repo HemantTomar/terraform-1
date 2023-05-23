@@ -2,13 +2,21 @@
 # MAINTAINER Vitaliy Natarov "vitaliy.natarov@yahoo.com"
 #
 terraform {
-  required_version = "~> 1.0"
+  required_version = "~> 1.1"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "4.9.0"
+    }
+  }
+
 }
 
 provider "aws" {
-  region                  = "us-west-2"
-  profile                 = "default"
-  shared_credentials_file = pathexpand("~/.aws/credentials")
+  region                   = "us-west-2"
+  shared_credentials_files = [pathexpand("~/.aws/credentials")]
+  profile                  = "default"
 }
 
 module "s3_private_bucket" {
@@ -19,7 +27,10 @@ module "s3_private_bucket" {
   # AWS S3 bucket
   enable_s3_bucket = true
   s3_bucket_name   = "natarov-test-bucket1"
-  s3_bucket_acl    = "private"
+
+  // Enable S3 bucket ACL
+  enable_s3_bucket_acl = true
+  s3_bucket_acl_acl    = "private"
 
   tags = tomap({
     "Environment"   = "dev",
@@ -34,27 +45,19 @@ module "s3" {
   name        = "TEST"
   environment = "dev"
 
-  # AWS S3 bucket
+  // AWS S3 bucket
   enable_s3_bucket = true
   s3_bucket_name   = "natarov-test-bucket2"
-  s3_bucket_acl    = "private"
 
-  s3_bucket_grant = []
-  s3_bucket_website = {
-    index_document = "index.tml"
-    error_document = "error.tml"
-    routing_rules = jsonencode([{
-      Condition : {
-        KeyPrefixEquals : "docs/"
-      },
-      Redirect : {
-        ReplaceKeyPrefixWith : "documents/"
-      }
-    }])
-
+  // Enable versioning for S3 bucket
+  enable_s3_bucket_versioning = true
+  s3_bucket_versioning_versioning_configuration = {
+    status = "Enabled"
   }
 
-  s3_bucket_cors_rule = [
+  // Enable S3 bucket CORS configuration
+  enable_s3_bucket_cors_configuration = true
+  s3_bucket_cors_configuration_cors_rule = [
     {
       allowed_headers = ["*"]
       allowed_methods = ["PUT", "POST"]
@@ -71,31 +74,72 @@ module "s3" {
     }
   ]
 
-  s3_bucket_versioning = {
-    enabled = true
-  }
+  // Enable S3 bucket logging
+  enable_s3_bucket_logging        = true
+  s3_bucket_logging_target_prefix = "logs/"
+  s3_bucket_logging_target_bucket = "log_bucket_here"
+  s3_bucket_logging_target_grant  = []
 
-  s3_bucket_logging = {
-    target_bucket = module.s3_private_bucket.s3_bucket_arn
-    target_prefix = "log/"
-  }
 
-  s3_bucket_lifecycle_rule = [
+  // Enable S3 bucket server side encryption configuration
+  enable_s3_bucket_server_side_encryption_configuration = false
+  s3_bucket_server_side_encryption_configuration_rule = [
     {
-      enabled = true
+      kms_master_key_id = "kms_key_arn_here"
 
+      sse_algorithm = "aws:kms"
+    }
+  ]
+
+  // Enable S3 bucket ACL
+  enable_s3_bucket_acl = true
+  s3_bucket_acl_acl    = "private"
+
+
+  // Enable S3 bucket website configuration
+  enable_s3_bucket_website_configuration = true
+  s3_bucket_website_configuration_index_document = {
+    suffix = "index.tml"
+  }
+  s3_bucket_website_configuration_error_document = {
+    key = "error.tml"
+  }
+
+  s3_bucket_website_configuration_routing_rule = [
+    {
+      condition = {
+        key_prefix_equals = "docs/"
+      }
+      redirect = {
+        replace_key_prefix_with = "documents/"
+      }
+    }
+  ]
+
+
+  // Enable S3 bucket lifecycle configuration
+  enable_s3_bucket_lifecycle_configuration = true
+  s3_bucket_lifecycle_configuration_rule = [
+    {
       id     = "log"
-      prefix = "log/"
-      tags   = tomap({ "rule" = "log", "autoclean" = "true" })
+      status = "Enabled"
 
-      expiration = {
-        days = 90
+      filter = {
+        and = [
+          {
+            prefix = "log/"
+            tags = {
+              rule      = "log"
+              autoclean = "true"
+            }
+          }
+        ]
       }
 
       transition = [
         {
           days          = 30
-          storage_class = "ONEZONE_IA"
+          storage_class = "STANDARD_IA"
         },
         {
           days          = 60
@@ -103,16 +147,13 @@ module "s3" {
         }
       ]
 
+      expiration = {
+        days = 90
+      }
+
       noncurrent_version_expiration = {
         days = 30
       }
-    },
-    {
-      enabled = true
-
-      id                                     = "log1"
-      prefix                                 = "log1/"
-      abort_incomplete_multipart_upload_days = 7
 
       noncurrent_version_transition = [
         {
@@ -126,38 +167,15 @@ module "s3" {
         {
           days          = 180
           storage_class = "GLACIER"
-        },
+        }
       ]
 
-      noncurrent_version_expiration = {
-        days = 365
-      }
     }
   ]
 
-  s3_bucket_server_side_encryption_configuration = {
-    //rule = {
-    //  apply_server_side_encryption_by_default = {
-    //    kms_master_key_id = module.kms_key.kms_key_arn
-    //    sse_algorithm     = "aws:kms"
-    //  }
-    //}
-  }
-
-  s3_bucket_object_lock_configuration = {
-    //object_lock_enabled = "Enabled"
-    //rule = {
-    //  default_retention = {
-    //    mode = "GOVERNANCE"
-    //    days = 1
-    //  }
-    //}
-  }
-
-
-  # Add files to bucket
-  enable_s3_bucket_object = true
-  s3_bucket_object_stack = [
+  // Add files to bucket
+  enable_s3_object = true
+  s3_object_stack = [
     {
       key = "additional_files/test.txt"
     },
@@ -204,7 +222,10 @@ module "s3_bucket_public_access_block" {
   # AWS S3 bucket
   enable_s3_bucket = true
   s3_bucket_name   = "natarov-test-bucket3"
-  s3_bucket_acl    = "private"
+
+  # Enable S3 bucket ACL
+  enable_s3_bucket_acl = true
+  s3_bucket_acl_acl    = "private"
 
   # AWS S3 bucket public access block
   enable_s3_bucket_public_access_block = true
